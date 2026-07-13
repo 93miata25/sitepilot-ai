@@ -14,6 +14,10 @@ final class ScannerManager {
         return is_array( $cached ) ? $cached : $this->run_scan();
     }
 
+    public function clear_cache(): void {
+        delete_transient( self::TRANSIENT_KEY );
+    }
+
     public function run_scan( bool $force = false ): array {
         if ( ! $force ) {
             $cached = get_transient( self::TRANSIENT_KEY );

@@ -4,7 +4,7 @@ Tags: performance, security, seo, scanner, site health
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 0.3.0
+Stable tag: 0.4.0
 License: GPLv2 or later
 
 A modular WordPress website scanner and optimization assistant.
@@ -22,3 +22,9 @@ A modular WordPress website scanner and optimization assistant.
 
 = 0.2.0 =
 * Added modular scanner and website health dashboard.
+
+== Changelog ==
+
+= 0.4.0 =
+* Added structured issue objects, sorting, filtering, severity counts, a dedicated Issues page, and the Fix Manager API.
+* Added automatic fixes for XML-RPC and recommended security headers.
