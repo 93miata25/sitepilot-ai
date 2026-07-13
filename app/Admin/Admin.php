@@ -1,7 +1,9 @@
 <?php
 namespace SitePilotAI\Admin;
 
+use SitePilotAI\Fixes\ActivityRepository;
 use SitePilotAI\Fixes\FixManager;
+use SitePilotAI\Fixes\FixRegistry;
 use SitePilotAI\History\HistoryRepository;
 use SitePilotAI\History\Scheduler;
 use SitePilotAI\Issues\IssueManager;
@@ -32,6 +34,7 @@ final class Admin {
     public function register_menu(): void {
         add_menu_page( __( 'SitePilot AI', 'sitepilot-ai' ), __( 'SitePilot AI', 'sitepilot-ai' ), 'manage_options', 'sitepilot-ai', array( $this, 'render_dashboard' ), 'dashicons-performance', 58 );
         add_submenu_page( 'sitepilot-ai', __( 'Dashboard', 'sitepilot-ai' ), __( 'Dashboard', 'sitepilot-ai' ), 'manage_options', 'sitepilot-ai', array( $this, 'render_dashboard' ) );
+        add_submenu_page( 'sitepilot-ai', __( 'Fix Center', 'sitepilot-ai' ), __( 'Fix Center', 'sitepilot-ai' ), 'manage_options', 'sitepilot-ai-fix-center', array( $this, 'render_fix_center' ) );
         add_submenu_page( 'sitepilot-ai', __( 'Issues', 'sitepilot-ai' ), __( 'Issues', 'sitepilot-ai' ), 'manage_options', 'sitepilot-ai-issues', array( $this, 'render_issues' ) );
         add_submenu_page( 'sitepilot-ai', __( 'History', 'sitepilot-ai' ), __( 'History', 'sitepilot-ai' ), 'manage_options', 'sitepilot-ai-history', array( $this, 'render_history' ) );
         add_submenu_page( 'sitepilot-ai', __( 'Performance', 'sitepilot-ai' ), __( 'Performance', 'sitepilot-ai' ), 'manage_options', 'sitepilot-ai-performance', array( $this, 'render_performance' ) );
@@ -39,7 +42,7 @@ final class Admin {
     }
 
     public function enqueue_assets( string $hook_suffix ): void {
-        if ( ! in_array( $hook_suffix, array( 'toplevel_page_sitepilot-ai', 'sitepilot-ai_page_sitepilot-ai-issues', 'sitepilot-ai_page_sitepilot-ai-history', 'sitepilot-ai_page_sitepilot-ai-database', 'sitepilot-ai_page_sitepilot-ai-performance' ), true ) ) {
+        if ( ! in_array( $hook_suffix, array( 'toplevel_page_sitepilot-ai', 'sitepilot-ai_page_sitepilot-ai-fix-center', 'sitepilot-ai_page_sitepilot-ai-issues', 'sitepilot-ai_page_sitepilot-ai-history', 'sitepilot-ai_page_sitepilot-ai-database', 'sitepilot-ai_page_sitepilot-ai-performance' ), true ) ) {
             return;
         }
 
@@ -75,6 +78,27 @@ final class Admin {
         $score_delta = ( $latest && $previous ) ? (int) $latest['overall_score'] - (int) $previous['overall_score'] : null;
         $scan_count = $history->count();
         require SITEPILOT_AI_PATH . 'templates/dashboard.php';
+    }
+
+    public function render_fix_center(): void {
+        if ( ! current_user_can( 'manage_options' ) ) return;
+        $results  = $this->scanner->get_results();
+        $issues   = $results['health']['issues'] ?? array();
+        $registry = new FixRegistry();
+        $fixes    = $registry->for_issues( $issues );
+        $db_report = ( new DatabaseScanner() )->scan();
+        if ( ! empty( $db_report['expired_transients'] ) ) {
+            $transient_fix = $registry->get( 'delete_expired_transients' );
+            if ( $transient_fix ) {
+                $transient_fix['impact'] = min( 5, max( 1, (int) ceil( $db_report['expired_transients'] / 25 ) ) );
+                $transient_fix['severity'] = 'low';
+                $transient_fix['issue_id'] = 'expired_transients';
+                $fixes[] = $transient_fix;
+            }
+        }
+        usort( $fixes, static function ( array $left, array $right ): int { return (int) $right['impact'] <=> (int) $left['impact']; } );
+        $activity = ( new ActivityRepository() )->recent( 10 );
+        require SITEPILOT_AI_PATH . 'templates/fix-center.php';
     }
 
     public function render_issues(): void {
@@ -168,6 +192,6 @@ final class Admin {
         $action = isset( $_POST['fix_action'] ) ? sanitize_key( wp_unslash( $_POST['fix_action'] ) ) : '';
         $result = ( new FixManager() )->run( $action );
         if ( empty( $result['success'] ) ) wp_send_json_error( array( 'message' => $result['message'] ?? __( 'The fix failed.', 'sitepilot-ai' ) ), 400 );
-        wp_send_json_success( array( 'message' => $result['message'], 'scan' => $this->scanner->run_scan( true ) ) );
+        wp_send_json_success( $result );
     }
 }

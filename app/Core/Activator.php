@@ -1,6 +1,7 @@
 <?php
 namespace SitePilotAI\Core;
 
+use SitePilotAI\Fixes\ActivityRepository;
 use SitePilotAI\History\HistoryRepository;
 use SitePilotAI\History\Scheduler;
 
@@ -19,6 +20,7 @@ final class Activator {
         }
 
         HistoryRepository::create_table();
+        ActivityRepository::create_table();
         Scheduler::schedule();
 
         update_option( 'sitepilot_ai_version', SITEPILOT_AI_VERSION );

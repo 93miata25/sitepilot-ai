@@ -2,6 +2,7 @@
 namespace SitePilotAI\Core;
 
 use SitePilotAI\Admin\Admin;
+use SitePilotAI\Fixes\ActivityRepository;
 use SitePilotAI\History\HistoryRepository;
 use SitePilotAI\History\Scheduler;
 
@@ -67,6 +68,7 @@ final class Plugin {
         }
 
         HistoryRepository::create_table();
+        ActivityRepository::create_table();
         update_option( 'sitepilot_ai_version', SITEPILOT_AI_VERSION );
     }
 }

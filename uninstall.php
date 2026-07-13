@@ -16,3 +16,4 @@ delete_option( 'sitepilot_ai_security_headers' );
 delete_transient( 'sitepilot_ai_scan_results' );
 
 $wpdb->query( 'DROP TABLE IF EXISTS ' . $wpdb->prefix . 'sitepilot_ai_scans' );
+$wpdb->query( 'DROP TABLE IF EXISTS ' . $wpdb->prefix . 'sitepilot_ai_activity' );

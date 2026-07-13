@@ -11,6 +11,12 @@ A modular WordPress website scanner and optimization assistant.
 
 == Changelog ==
 
+= 0.8.0 =
+* Added Fix Center with prioritized automatic fixes.
+* Added action history and before/after health scores.
+* Added expired transient cleanup.
+
+
 = 0.5.0 =
 * Added persistent site-health scan history using a dedicated database table.
 * Added overall and category score history, issue counts, scan duration, plugin count, and compact scan snapshots.
