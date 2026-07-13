@@ -175,4 +175,84 @@
             });
         });
     });
+
+
+    document.addEventListener('DOMContentLoaded', function () {
+        var button = document.getElementById('sitepilot-run-performance-scan');
+        if (!button) return;
+
+        function pathValue(object, path) {
+            return path.split('.').reduce(function (value, key) {
+                return value && Object.prototype.hasOwnProperty.call(value, key) ? value[key] : '';
+            }, object);
+        }
+
+        function status(message, isError) {
+            var node = document.querySelector('[data-sitepilot-performance-status]');
+            if (!node) return;
+            node.hidden = false;
+            node.textContent = message;
+            node.classList.toggle('is-error', Boolean(isError));
+        }
+
+        function renderRecommendations(items) {
+            var container = document.querySelector('[data-performance-recommendations]');
+            var count = document.querySelector('[data-performance-recommendation-count]');
+            if (count) count.textContent = items.length;
+            if (!container) return;
+            if (!items.length) {
+                container.innerHTML = '<div class="sitepilot-empty-state">No major performance configuration issues were detected.</div>';
+                return;
+            }
+            container.replaceChildren.apply(container, items.map(function (item) {
+                var article = document.createElement('article');
+                article.className = 'sitepilot-performance-recommendation sitepilot-performance-recommendation--' + item.status;
+                var impact = document.createElement('span');
+                impact.textContent = '+' + item.impact;
+                var copy = document.createElement('div');
+                var title = document.createElement('h3');
+                title.textContent = item.title;
+                var message = document.createElement('p');
+                message.textContent = item.message;
+                copy.append(title, message);
+                article.append(impact, copy);
+                return article;
+            }));
+        }
+
+        button.addEventListener('click', function () {
+            button.disabled = true;
+            document.getElementById('sitepilot-performance').classList.add('sitepilot-is-scanning');
+            status(SitePilotAI.scanningPerformance, false);
+            fetch(SitePilotAI.ajaxUrl, {
+                method: 'POST', credentials: 'same-origin',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'},
+                body: new URLSearchParams({action: 'sitepilot_ai_run_performance_scan', nonce: SitePilotAI.performanceNonce}).toString()
+            }).then(function (response) { return response.json(); }).then(function (response) {
+                if (!response.success) throw new Error(response.data && response.data.message ? response.data.message : SitePilotAI.error);
+                var data = response.data;
+                document.querySelectorAll('[data-performance-field]').forEach(function (node) {
+                    node.textContent = pathValue(data, node.dataset.performanceField);
+                });
+                var ring = document.querySelector('#sitepilot-performance .sitepilot-score-ring');
+                if (ring) ring.style.setProperty('--sitepilot-score', data.score);
+                var label = document.querySelector('[data-performance-status-label]');
+                if (label) label.textContent = data.score >= 90 ? 'Excellent' : (data.score >= 75 ? 'Good' : (data.score >= 55 ? 'Needs attention' : 'Poor'));
+                Object.keys(data.checks).forEach(function (key) {
+                    var node = document.querySelector('[data-performance-check="' + key + '"]');
+                    if (!node) return;
+                    node.className = 'sitepilot-performance-check sitepilot-performance-check--' + data.checks[key].status;
+                    var value = node.querySelector('[data-check-value]');
+                    if (value) value.textContent = data.checks[key].value;
+                });
+                renderRecommendations(data.recommendations || []);
+                status(SitePilotAI.performanceCompleted, false);
+            }).catch(function (error) {
+                status(error.message || SitePilotAI.error, true);
+            }).finally(function () {
+                button.disabled = false;
+                document.getElementById('sitepilot-performance').classList.remove('sitepilot-is-scanning');
+            });
+        });
+    });
 }());

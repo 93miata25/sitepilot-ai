@@ -3,7 +3,7 @@
  * Plugin Name: SitePilot AI
  * Plugin URI:  https://github.com/93miata25/sitepilot-ai
  * Description: A modular WordPress website scanner and optimization assistant.
- * Version:     0.6.0
+ * Version:     0.7.0
  * Author:      SitePilot AI
  * Text Domain: sitepilot-ai
  * Domain Path: /languages
@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'SITEPILOT_AI_VERSION', '0.6.0' );
+define( 'SITEPILOT_AI_VERSION', '0.7.0' );
 define( 'SITEPILOT_AI_FILE', __FILE__ );
 define( 'SITEPILOT_AI_PATH', plugin_dir_path( __FILE__ ) );
 define( 'SITEPILOT_AI_URL', plugin_dir_url( __FILE__ ) );

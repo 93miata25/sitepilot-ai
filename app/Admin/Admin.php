@@ -7,6 +7,7 @@ use SitePilotAI\History\Scheduler;
 use SitePilotAI\Issues\IssueManager;
 use SitePilotAI\Modules\Database\DatabaseOptimizer;
 use SitePilotAI\Modules\Database\DatabaseScanner;
+use SitePilotAI\Modules\Performance\PerformanceModule;
 use SitePilotAI\Scanner\ScannerManager;
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -23,6 +24,7 @@ final class Admin {
         add_action( 'wp_ajax_sitepilot_ai_run_scan', array( $this, 'ajax_run_scan' ) );
         add_action( 'wp_ajax_sitepilot_ai_fix_issue', array( $this, 'ajax_fix_issue' ) );
         add_action( 'wp_ajax_sitepilot_ai_optimize_database', array( $this, 'ajax_optimize_database' ) );
+        add_action( 'wp_ajax_sitepilot_ai_run_performance_scan', array( $this, 'ajax_run_performance_scan' ) );
         add_action( 'admin_post_sitepilot_ai_save_history_settings', array( $this, 'save_history_settings' ) );
         add_action( 'admin_post_sitepilot_ai_clear_history', array( $this, 'clear_history' ) );
     }
@@ -32,11 +34,12 @@ final class Admin {
         add_submenu_page( 'sitepilot-ai', __( 'Dashboard', 'sitepilot-ai' ), __( 'Dashboard', 'sitepilot-ai' ), 'manage_options', 'sitepilot-ai', array( $this, 'render_dashboard' ) );
         add_submenu_page( 'sitepilot-ai', __( 'Issues', 'sitepilot-ai' ), __( 'Issues', 'sitepilot-ai' ), 'manage_options', 'sitepilot-ai-issues', array( $this, 'render_issues' ) );
         add_submenu_page( 'sitepilot-ai', __( 'History', 'sitepilot-ai' ), __( 'History', 'sitepilot-ai' ), 'manage_options', 'sitepilot-ai-history', array( $this, 'render_history' ) );
+        add_submenu_page( 'sitepilot-ai', __( 'Performance', 'sitepilot-ai' ), __( 'Performance', 'sitepilot-ai' ), 'manage_options', 'sitepilot-ai-performance', array( $this, 'render_performance' ) );
         add_submenu_page( 'sitepilot-ai', __( 'Database Optimizer', 'sitepilot-ai' ), __( 'Database', 'sitepilot-ai' ), 'manage_options', 'sitepilot-ai-database', array( $this, 'render_database' ) );
     }
 
     public function enqueue_assets( string $hook_suffix ): void {
-        if ( ! in_array( $hook_suffix, array( 'toplevel_page_sitepilot-ai', 'sitepilot-ai_page_sitepilot-ai-issues', 'sitepilot-ai_page_sitepilot-ai-history', 'sitepilot-ai_page_sitepilot-ai-database' ), true ) ) {
+        if ( ! in_array( $hook_suffix, array( 'toplevel_page_sitepilot-ai', 'sitepilot-ai_page_sitepilot-ai-issues', 'sitepilot-ai_page_sitepilot-ai-history', 'sitepilot-ai_page_sitepilot-ai-database', 'sitepilot-ai_page_sitepilot-ai-performance' ), true ) ) {
             return;
         }
 
@@ -57,6 +60,9 @@ final class Admin {
             'databaseNonce' => wp_create_nonce( 'sitepilot_ai_database' ),
             'confirmDatabase' => __( 'This cleanup permanently deletes the selected data. Continue?', 'sitepilot-ai' ),
             'optimizingDatabase' => __( 'Optimizing database…', 'sitepilot-ai' ),
+            'performanceNonce' => wp_create_nonce( 'sitepilot_ai_performance' ),
+            'scanningPerformance' => __( 'Scanning performance…', 'sitepilot-ai' ),
+            'performanceCompleted' => __( 'Performance scan completed.', 'sitepilot-ai' ),
         ) );
     }
 
@@ -84,6 +90,12 @@ final class Admin {
         require SITEPILOT_AI_PATH . 'templates/issues.php';
     }
 
+
+    public function render_performance(): void {
+        if ( ! current_user_can( 'manage_options' ) ) return;
+        $report = ( new PerformanceModule() )->report();
+        require SITEPILOT_AI_PATH . 'templates/performance.php';
+    }
 
     public function render_database(): void {
         if ( ! current_user_can( 'manage_options' ) ) return;
@@ -124,6 +136,14 @@ final class Admin {
         wp_send_json_success( $this->scanner->run_scan( true ) );
     }
 
+
+    public function ajax_run_performance_scan(): void {
+        check_ajax_referer( 'sitepilot_ai_performance', 'nonce' );
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( array( 'message' => __( 'Permission denied.', 'sitepilot-ai' ) ), 403 );
+        }
+        wp_send_json_success( ( new PerformanceModule() )->refresh() );
+    }
 
     public function ajax_optimize_database(): void {
         check_ajax_referer( 'sitepilot_ai_database', 'nonce' );

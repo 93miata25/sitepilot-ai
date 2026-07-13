@@ -34,3 +34,8 @@ A modular WordPress website scanner and optimization assistant.
 * Added Database Optimizer page.
 * Added selective cleanup for expired transients, spam comments, trashed comments, trashed posts, and revisions.
 * Added WordPress table optimization and before/after database size reporting.
+
+= 0.7.0 =
+* Added a dedicated Performance dashboard.
+* Added OPcache, object cache, page cache, compression, memory, autoload, cron, media count, and media-size checks.
+* Added prioritized performance recommendations and AJAX rescanning.
