@@ -1,40 +1,84 @@
 <?php
-namespace SitePilot\Admin;
-if(!defined('ABSPATH')) exit;
+namespace SitePilotAI\Admin;
 
-class Admin{
-    public function __construct(){
-        add_action('admin_menu',[$this,'menu']);
+use SitePilotAI\Scanner\ScannerManager;
+
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
+final class Admin {
+    private ScannerManager $scanner;
+
+    public function __construct() {
+        $this->scanner = new ScannerManager();
+
+        add_action( 'admin_menu', array( $this, 'register_menu' ) );
+        add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
+        add_action( 'wp_ajax_sitepilot_ai_run_scan', array( $this, 'ajax_run_scan' ) );
     }
 
-    public function menu(){
+    public function register_menu(): void {
         add_menu_page(
-            'SitePilot AI',
-            'SitePilot AI',
+            __( 'SitePilot AI', 'sitepilot-ai' ),
+            __( 'SitePilot AI', 'sitepilot-ai' ),
             'manage_options',
             'sitepilot-ai',
-            [$this,'dashboard'],
-            'dashicons-performance'
+            array( $this, 'render_dashboard' ),
+            'dashicons-performance',
+            58
         );
     }
 
-    public function dashboard(){
-        ?>
-        <div class="wrap">
-            <h1>SitePilot AI</h1>
-            <h2>Version 0.1.0</h2>
-            <p><strong>Status:</strong> Project Skeleton Installed</p>
-            <hr>
-            <h3>Coming Next</h3>
-            <ul>
-                <li>Website Scanner</li>
-                <li>Performance Score</li>
-                <li>SEO Analyzer</li>
-                <li>Image Optimizer</li>
-                <li>AI Assistant</li>
-            </ul>
-            <p><button class="button button-primary">Scan Website (Coming Soon)</button></p>
-        </div>
-        <?php
+    public function enqueue_assets( string $hook_suffix ): void {
+        if ( 'toplevel_page_sitepilot-ai' !== $hook_suffix ) {
+            return;
+        }
+
+        wp_enqueue_style(
+            'sitepilot-ai-admin',
+            SITEPILOT_AI_URL . 'assets/css/admin.css',
+            array(),
+            SITEPILOT_AI_VERSION
+        );
+
+        wp_enqueue_script(
+            'sitepilot-ai-admin',
+            SITEPILOT_AI_URL . 'assets/js/admin.js',
+            array(),
+            SITEPILOT_AI_VERSION,
+            true
+        );
+
+        wp_localize_script(
+            'sitepilot-ai-admin',
+            'SitePilotAI',
+            array(
+                'ajaxUrl'  => admin_url( 'admin-ajax.php' ),
+                'nonce'    => wp_create_nonce( 'sitepilot_ai_scan' ),
+                'scanning' => __( 'Scanning website…', 'sitepilot-ai' ),
+                'error'    => __( 'The scan could not be completed.', 'sitepilot-ai' ),
+            )
+        );
+    }
+
+    public function render_dashboard(): void {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            return;
+        }
+
+        $results = $this->scanner->get_results();
+        require SITEPILOT_AI_PATH . 'templates/dashboard.php';
+    }
+
+    public function ajax_run_scan(): void {
+        check_ajax_referer( 'sitepilot_ai_scan', 'nonce' );
+
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( array( 'message' => __( 'Permission denied.', 'sitepilot-ai' ) ), 403 );
+        }
+
+        $results = $this->scanner->run_scan( true );
+        wp_send_json_success( $results );
     }
 }
