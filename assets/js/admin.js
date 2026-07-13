@@ -256,3 +256,52 @@
         });
     });
 }());
+
+(function () {
+    'use strict';
+
+    document.addEventListener('DOMContentLoaded', function () {
+        var buttons = document.querySelectorAll('[data-sitepilot-automation-job]');
+        if (!buttons.length) return;
+
+        function setStatus(message, isError) {
+            var node = document.querySelector('[data-sitepilot-automation-status]');
+            if (!node) return;
+            node.hidden = false;
+            node.textContent = message;
+            node.classList.toggle('is-error', Boolean(isError));
+        }
+
+        buttons.forEach(function (button) {
+            button.addEventListener('click', function () {
+                if (!window.confirm(SitePilotAI.confirmAutomation)) return;
+
+                var job = button.dataset.sitepilotAutomationJob;
+                button.disabled = true;
+                setStatus(SitePilotAI.runningAutomation, false);
+
+                fetch(SitePilotAI.ajaxUrl, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'},
+                    body: new URLSearchParams({
+                        action: 'sitepilot_ai_run_automation',
+                        nonce: SitePilotAI.automationNonce,
+                        job: job
+                    }).toString()
+                }).then(function (response) {
+                    return response.json();
+                }).then(function (response) {
+                    if (!response.success) {
+                        throw new Error(response.data && response.data.message ? response.data.message : SitePilotAI.error);
+                    }
+                    setStatus(response.data.message || 'Automation completed.', false);
+                    window.setTimeout(function () { window.location.reload(); }, 900);
+                }).catch(function (error) {
+                    setStatus(error.message || SitePilotAI.error, true);
+                    button.disabled = false;
+                });
+            });
+        });
+    });
+}());

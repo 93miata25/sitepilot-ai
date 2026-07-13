@@ -11,6 +11,11 @@ A modular WordPress website scanner and optimization assistant.
 
 == Changelog ==
 
+= 0.9.0 =
+* Added the Automation Center.
+* Added scheduled database maintenance.
+* Added manual automation controls and maintenance activity logging.
+
 = 0.8.0 =
 * Added Fix Center with prioritized automatic fixes.
 * Added action history and before/after health scores.

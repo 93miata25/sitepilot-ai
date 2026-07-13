@@ -1,6 +1,7 @@
 <?php
 namespace SitePilotAI\Admin;
 
+use SitePilotAI\Automation\AutomationManager;
 use SitePilotAI\Fixes\ActivityRepository;
 use SitePilotAI\Fixes\FixManager;
 use SitePilotAI\Fixes\FixRegistry;
@@ -27,6 +28,8 @@ final class Admin {
         add_action( 'wp_ajax_sitepilot_ai_fix_issue', array( $this, 'ajax_fix_issue' ) );
         add_action( 'wp_ajax_sitepilot_ai_optimize_database', array( $this, 'ajax_optimize_database' ) );
         add_action( 'wp_ajax_sitepilot_ai_run_performance_scan', array( $this, 'ajax_run_performance_scan' ) );
+        add_action( 'wp_ajax_sitepilot_ai_run_automation', array( $this, 'ajax_run_automation' ) );
+        add_action( 'admin_post_sitepilot_ai_save_automation', array( $this, 'save_automation_settings' ) );
         add_action( 'admin_post_sitepilot_ai_save_history_settings', array( $this, 'save_history_settings' ) );
         add_action( 'admin_post_sitepilot_ai_clear_history', array( $this, 'clear_history' ) );
     }
@@ -39,10 +42,11 @@ final class Admin {
         add_submenu_page( 'sitepilot-ai', __( 'History', 'sitepilot-ai' ), __( 'History', 'sitepilot-ai' ), 'manage_options', 'sitepilot-ai-history', array( $this, 'render_history' ) );
         add_submenu_page( 'sitepilot-ai', __( 'Performance', 'sitepilot-ai' ), __( 'Performance', 'sitepilot-ai' ), 'manage_options', 'sitepilot-ai-performance', array( $this, 'render_performance' ) );
         add_submenu_page( 'sitepilot-ai', __( 'Database Optimizer', 'sitepilot-ai' ), __( 'Database', 'sitepilot-ai' ), 'manage_options', 'sitepilot-ai-database', array( $this, 'render_database' ) );
+        add_submenu_page( 'sitepilot-ai', __( 'Automation Center', 'sitepilot-ai' ), __( 'Automation', 'sitepilot-ai' ), 'manage_options', 'sitepilot-ai-automation', array( $this, 'render_automation' ) );
     }
 
     public function enqueue_assets( string $hook_suffix ): void {
-        if ( ! in_array( $hook_suffix, array( 'toplevel_page_sitepilot-ai', 'sitepilot-ai_page_sitepilot-ai-fix-center', 'sitepilot-ai_page_sitepilot-ai-issues', 'sitepilot-ai_page_sitepilot-ai-history', 'sitepilot-ai_page_sitepilot-ai-database', 'sitepilot-ai_page_sitepilot-ai-performance' ), true ) ) {
+        if ( ! in_array( $hook_suffix, array( 'toplevel_page_sitepilot-ai', 'sitepilot-ai_page_sitepilot-ai-fix-center', 'sitepilot-ai_page_sitepilot-ai-issues', 'sitepilot-ai_page_sitepilot-ai-history', 'sitepilot-ai_page_sitepilot-ai-database', 'sitepilot-ai_page_sitepilot-ai-performance', 'sitepilot-ai_page_sitepilot-ai-automation' ), true ) ) {
             return;
         }
 
@@ -66,6 +70,9 @@ final class Admin {
             'performanceNonce' => wp_create_nonce( 'sitepilot_ai_performance' ),
             'scanningPerformance' => __( 'Scanning performance…', 'sitepilot-ai' ),
             'performanceCompleted' => __( 'Performance scan completed.', 'sitepilot-ai' ),
+            'automationNonce' => wp_create_nonce( 'sitepilot_ai_automation' ),
+            'runningAutomation' => __( 'Running automation…', 'sitepilot-ai' ),
+            'confirmAutomation' => __( 'Run this maintenance job now?', 'sitepilot-ai' ),
         ) );
     }
 
@@ -152,6 +159,52 @@ final class Admin {
         ( new HistoryRepository() )->delete_all();
         wp_safe_redirect( add_query_arg( array( 'page' => 'sitepilot-ai-history', 'cleared' => '1' ), admin_url( 'admin.php' ) ) );
         exit;
+    }
+
+
+    public function render_automation(): void {
+        if ( ! current_user_can( 'manage_options' ) ) return;
+        $manager  = new AutomationManager();
+        $status   = $manager->status();
+        $activity = ( new ActivityRepository() )->recent( 10 );
+        require SITEPILOT_AI_PATH . 'templates/automation.php';
+    }
+
+    public function save_automation_settings(): void {
+        if ( ! current_user_can( 'manage_options' ) ) wp_die( esc_html__( 'Permission denied.', 'sitepilot-ai' ) );
+        check_admin_referer( 'sitepilot_ai_automation_settings' );
+
+        $scan_frequency = isset( $_POST['scan_frequency'] ) ? sanitize_key( wp_unslash( $_POST['scan_frequency'] ) ) : 'daily';
+        if ( ! in_array( $scan_frequency, array( 'disabled', 'daily', 'weekly', 'monthly' ), true ) ) $scan_frequency = 'daily';
+
+        $database_frequency = isset( $_POST['database_frequency'] ) ? sanitize_key( wp_unslash( $_POST['database_frequency'] ) ) : 'weekly';
+        if ( ! in_array( $database_frequency, array( 'disabled', 'weekly', 'monthly' ), true ) ) $database_frequency = 'weekly';
+
+        $allowed_tasks = array( 'expired_transients', 'spam_comments', 'trashed_comments', 'trashed_posts', 'optimize_tables' );
+        $tasks = isset( $_POST['database_tasks'] ) && is_array( $_POST['database_tasks'] )
+            ? array_values( array_intersect( array_map( 'sanitize_key', wp_unslash( $_POST['database_tasks'] ) ), $allowed_tasks ) )
+            : array();
+        if ( empty( $tasks ) ) $tasks = array( 'expired_transients', 'optimize_tables' );
+
+        update_option( 'sitepilot_ai_database_tasks', $tasks );
+        Scheduler::reschedule( $scan_frequency );
+        AutomationManager::reschedule_database( $database_frequency );
+
+        wp_safe_redirect( add_query_arg( array( 'page' => 'sitepilot-ai-automation', 'updated' => '1' ), admin_url( 'admin.php' ) ) );
+        exit;
+    }
+
+    public function ajax_run_automation(): void {
+        check_ajax_referer( 'sitepilot_ai_automation', 'nonce' );
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( array( 'message' => __( 'Permission denied.', 'sitepilot-ai' ) ), 403 );
+        }
+        $job = isset( $_POST['job'] ) ? sanitize_key( wp_unslash( $_POST['job'] ) ) : '';
+        $result = ( new AutomationManager() )->run_job( $job );
+        if ( empty( $result['success'] ) ) {
+            wp_send_json_error( array( 'message' => $result['message'] ?? __( 'Automation failed.', 'sitepilot-ai' ) ), 400 );
+        }
+        wp_send_json_success( $result );
     }
 
     public function ajax_run_scan(): void {
