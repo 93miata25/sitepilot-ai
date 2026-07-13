@@ -1,32 +1,24 @@
 === SitePilot AI ===
-Contributors: 93miata25
-Tags: website health, scanner, performance, seo, security
+Contributors: sitepilotai
+Tags: performance, security, seo, scanner, site health
 Requires at least: 6.0
-Tested up to: 6.8
+Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 0.2.0
+Stable tag: 0.3.0
 License: GPLv2 or later
 
 A modular WordPress website scanner and optimization assistant.
 
-== Description ==
-
-SitePilot AI provides a website health dashboard with WordPress, server, theme, plugin, content, and security checks.
-
-== Installation ==
-
-1. Upload the `sitepilot-ai` folder to `/wp-content/plugins/`.
-2. Activate SitePilot AI through the Plugins screen.
-3. Open SitePilot AI in the WordPress admin menu.
-
 == Changelog ==
 
-= 0.2.0 =
-* Added namespaced autoloader and plugin bootstrap.
-* Added WordPress, server, theme, plugin, content, and security scanners.
-* Added weighted website health score and recommendations.
-* Added responsive admin dashboard.
-* Added AJAX-powered manual rescanning.
+= 0.3.0 =
+* Added category health scores for performance, security, SEO, accessibility, and updates.
+* Added HTTP compression, browser cache, page cache, object cache, OPcache, Redis, and Memcached detection.
+* Added robots.txt, sitemap, search visibility, and permalink checks.
+* Added database size and autoloaded options analysis.
+* Added security header and sensitive file permission checks.
+* Redesigned recommendations with severity, reason, fix, and score impact.
+* Added scan duration and improved AJAX dashboard updates.
 
-= 0.1.0 =
-* Initial project skeleton.
+= 0.2.0 =
+* Added modular scanner and website health dashboard.
