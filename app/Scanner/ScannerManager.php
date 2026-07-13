@@ -1,6 +1,8 @@
 <?php
 namespace SitePilotAI\Scanner;
 
+use SitePilotAI\History\HistoryRepository;
+
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
@@ -45,6 +47,7 @@ final class ScannerManager {
 
         set_transient( self::TRANSIENT_KEY, $results, self::CACHE_SECONDS );
         update_option( 'sitepilot_ai_last_scan', $results, false );
+        ( new HistoryRepository() )->save( $results );
 
         return $results;
     }

@@ -4,27 +4,28 @@ Tags: performance, security, seo, scanner, site health
 Requires at least: 6.0
 Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 0.4.0
+Stable tag: 0.5.0
 License: GPLv2 or later
 
 A modular WordPress website scanner and optimization assistant.
 
 == Changelog ==
 
-= 0.3.0 =
-* Added category health scores for performance, security, SEO, accessibility, and updates.
-* Added HTTP compression, browser cache, page cache, object cache, OPcache, Redis, and Memcached detection.
-* Added robots.txt, sitemap, search visibility, and permalink checks.
-* Added database size and autoloaded options analysis.
-* Added security header and sensitive file permission checks.
-* Redesigned recommendations with severity, reason, fix, and score impact.
-* Added scan duration and improved AJAX dashboard updates.
-
-= 0.2.0 =
-* Added modular scanner and website health dashboard.
-
-== Changelog ==
+= 0.5.0 =
+* Added persistent site-health scan history using a dedicated database table.
+* Added overall and category score history, issue counts, scan duration, plugin count, and compact scan snapshots.
+* Added a History admin page with a score trend chart and detailed scan records.
+* Added score change and total scan information to the dashboard.
+* Added automatic daily, weekly, monthly, or disabled scan scheduling through WP-Cron.
+* Added history clearing and schedule management controls.
 
 = 0.4.0 =
 * Added structured issue objects, sorting, filtering, severity counts, a dedicated Issues page, and the Fix Manager API.
 * Added automatic fixes for XML-RPC and recommended security headers.
+
+= 0.3.0 =
+* Added category health scores for performance, security, SEO, accessibility, and updates.
+* Added HTTP compression, cache, SEO, database, and security checks.
+
+= 0.2.0 =
+* Added modular scanner and website health dashboard.
