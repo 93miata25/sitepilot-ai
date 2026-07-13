@@ -29,3 +29,8 @@ A modular WordPress website scanner and optimization assistant.
 
 = 0.2.0 =
 * Added modular scanner and website health dashboard.
+
+= 0.6.0 =
+* Added Database Optimizer page.
+* Added selective cleanup for expired transients, spam comments, trashed comments, trashed posts, and revisions.
+* Added WordPress table optimization and before/after database size reporting.

@@ -121,4 +121,58 @@
             });
         });
     });
+
+    document.addEventListener('DOMContentLoaded', function () {
+        var button = document.getElementById('sitepilot-optimize-database');
+        if (!button) return;
+
+        function databaseStatus(message, isError) {
+            var node = document.querySelector('[data-sitepilot-database-status]');
+            if (!node) return;
+            node.hidden = false;
+            node.textContent = message;
+            node.classList.toggle('is-error', Boolean(isError));
+        }
+
+        button.addEventListener('click', function () {
+            var tasks = Array.prototype.slice.call(document.querySelectorAll('.sitepilot-db-task input:checked')).map(function (input) {
+                return input.value;
+            });
+            if (!tasks.length) {
+                databaseStatus('Select at least one cleanup task.', true);
+                return;
+            }
+            if (!window.confirm(SitePilotAI.confirmDatabase)) return;
+
+            button.disabled = true;
+            databaseStatus(SitePilotAI.optimizingDatabase, false);
+            var params = new URLSearchParams({action: 'sitepilot_ai_optimize_database', nonce: SitePilotAI.databaseNonce});
+            tasks.forEach(function (task) { params.append('tasks[]', task); });
+
+            fetch(SitePilotAI.ajaxUrl, {
+                method: 'POST', credentials: 'same-origin',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'},
+                body: params.toString()
+            }).then(function (response) { return response.json(); }).then(function (response) {
+                if (!response.success) throw new Error(response.data && response.data.message ? response.data.message : SitePilotAI.error);
+                var data = response.data;
+                var processed = Object.keys(data.deleted || {}).reduce(function (sum, key) { return sum + Number(data.deleted[key] || 0); }, 0);
+                document.querySelectorAll('[data-result]').forEach(function (node) {
+                    var key = node.dataset.result;
+                    node.textContent = key === 'processed' ? processed : (data[key] || '—');
+                });
+                Object.keys(data.report || {}).forEach(function (key) {
+                    document.querySelectorAll('[data-db-field="' + key + '"]').forEach(function (node) { node.textContent = data.report[key]; });
+                    document.querySelectorAll('[data-db-count="' + key + '"]').forEach(function (node) { node.textContent = data.report[key]; });
+                });
+                var result = document.getElementById('sitepilot-db-result');
+                if (result) result.hidden = false;
+                databaseStatus(data.errors && data.errors.length ? 'Cleanup finished, but some tables could not be optimized.' : 'Database optimization completed successfully.', Boolean(data.errors && data.errors.length));
+            }).catch(function (error) {
+                databaseStatus(error.message || SitePilotAI.error, true);
+            }).finally(function () {
+                button.disabled = false;
+            });
+        });
+    });
 }());
