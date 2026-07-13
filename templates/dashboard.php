@@ -1,27 +1,72 @@
 <?php
-if ( ! defined( 'ABSPATH' ) ) exit;
-$health=$results['health']; $wordpress=$results['wordpress']; $server=$results['server']; $theme=$results['theme']; $plugins=$results['plugins']; $content=$results['content']; $security=$results['security']; $performance=$results['performance']; $seo=$results['seo']; $database=$results['database'];
-$category_labels=array('performance'=>__('Performance','sitepilot-ai'),'security'=>__('Security','sitepilot-ai'),'seo'=>__('SEO','sitepilot-ai'),'accessibility'=>__('Accessibility','sitepilot-ai'),'updates'=>__('Updates','sitepilot-ai'));
+if (! defined('ABSPATH')) {
+    exit;
+}
+
+$sections = $scan['sections'];
 ?>
-<div class="wrap sitepilot-wrap" id="sitepilot-dashboard">
-<header class="sitepilot-header"><div><h1><?php esc_html_e('SitePilot AI','sitepilot-ai'); ?></h1><p><?php echo esc_html(home_url('/')); ?></p></div><button type="button" class="button button-primary sitepilot-scan-button" id="sitepilot-run-scan"><span class="dashicons dashicons-update"></span><?php esc_html_e('Run New Scan','sitepilot-ai'); ?></button></header>
-<div class="sitepilot-notice" id="sitepilot-scan-status" hidden></div>
-<section class="sitepilot-hero-card">
-<div class="sitepilot-score-ring" style="--sitepilot-score:<?php echo esc_attr((string)$health['score']); ?>"><span class="sitepilot-score-value" data-sitepilot-field="health.score"><?php echo esc_html((string)$health['score']); ?></span><small>/100</small></div>
-<div class="sitepilot-hero-copy"><span class="sitepilot-eyebrow"><?php esc_html_e('Website Health','sitepilot-ai'); ?></span><h2 data-sitepilot-field="health.label"><?php echo esc_html($health['label']); ?></h2><p><?php esc_html_e('Last scan:','sitepilot-ai'); ?> <span data-sitepilot-field="scanned_at"><?php echo esc_html($results['scanned_at']); ?></span> · <span data-sitepilot-field="scan_duration"><?php echo esc_html((string)$results['scan_duration']); ?></span>s</p><p><?php esc_html_e('Total scans:','sitepilot-ai'); ?> <strong><?php echo esc_html((string)$scan_count); ?></strong><?php if(null!==$score_delta): $trend_class=$score_delta>0?'up':($score_delta<0?'down':'same'); ?><span class="sitepilot-trend sitepilot-trend--<?php echo esc_attr($trend_class); ?>"><?php echo esc_html(($score_delta>0?'+':'').(string)$score_delta); ?> <?php esc_html_e('since previous scan','sitepilot-ai'); ?></span><?php endif; ?> · <a href="<?php echo esc_url(admin_url('admin.php?page=sitepilot-ai-history')); ?>"><?php esc_html_e('View history','sitepilot-ai'); ?></a></p></div>
-<div class="sitepilot-category-list">
-<?php foreach($category_labels as $key=>$label): $value=(int)$health['categories'][$key]; ?><div class="sitepilot-category"><div><span><?php echo esc_html($label); ?></span><strong data-sitepilot-field="health.categories.<?php echo esc_attr($key); ?>"><?php echo esc_html((string)$value); ?></strong></div><div class="sitepilot-progress"><span data-sitepilot-progress="health.categories.<?php echo esc_attr($key); ?>" style="width:<?php echo esc_attr((string)$value); ?>%"></span></div></div><?php endforeach; ?>
-</div></section>
-<div class="sitepilot-grid sitepilot-grid--stats">
-<article class="sitepilot-card"><span><?php esc_html_e('WordPress','sitepilot-ai'); ?></span><strong data-sitepilot-field="wordpress.version"><?php echo esc_html($wordpress['version']); ?></strong></article>
-<article class="sitepilot-card"><span><?php esc_html_e('PHP','sitepilot-ai'); ?></span><strong data-sitepilot-field="server.php_version"><?php echo esc_html($server['php_version']); ?></strong></article>
-<article class="sitepilot-card"><span><?php esc_html_e('Active Plugins','sitepilot-ai'); ?></span><strong data-sitepilot-field="plugins.active"><?php echo esc_html((string)$plugins['active']); ?></strong></article>
-<article class="sitepilot-card"><span><?php esc_html_e('Plugin Updates','sitepilot-ai'); ?></span><strong data-sitepilot-field="plugins.update_count"><?php echo esc_html((string)$plugins['update_count']); ?></strong></article>
-</div>
-<div class="sitepilot-grid sitepilot-grid--three">
-<section class="sitepilot-panel"><h2><?php esc_html_e('Performance','sitepilot-ai'); ?></h2><dl class="sitepilot-details"><div><dt><?php esc_html_e('Compression','sitepilot-ai'); ?></dt><dd data-sitepilot-field="performance.compression"><?php echo esc_html($performance['compression']); ?></dd></div><div><dt><?php esc_html_e('Browser caching','sitepilot-ai'); ?></dt><dd data-sitepilot-boolean="performance.browser_cache"><?php echo $performance['browser_cache']?esc_html__('Enabled','sitepilot-ai'):esc_html__('Disabled','sitepilot-ai'); ?></dd></div><div><dt><?php esc_html_e('Page cache','sitepilot-ai'); ?></dt><dd data-sitepilot-field="performance.page_cache_hint"><?php echo esc_html($performance['page_cache_hint']); ?></dd></div><div><dt><?php esc_html_e('Object cache','sitepilot-ai'); ?></dt><dd data-sitepilot-boolean="performance.object_cache"><?php echo $performance['object_cache']?esc_html__('Enabled','sitepilot-ai'):esc_html__('Disabled','sitepilot-ai'); ?></dd></div><div><dt><?php esc_html_e('OPcache','sitepilot-ai'); ?></dt><dd data-sitepilot-boolean="performance.opcache"><?php echo $performance['opcache']?esc_html__('Enabled','sitepilot-ai'):esc_html__('Disabled','sitepilot-ai'); ?></dd></div></dl></section>
-<section class="sitepilot-panel"><h2><?php esc_html_e('SEO','sitepilot-ai'); ?></h2><dl class="sitepilot-details"><div><dt><?php esc_html_e('Search visibility','sitepilot-ai'); ?></dt><dd data-sitepilot-boolean="seo.search_visible"><?php echo $seo['search_visible']?esc_html__('Enabled','sitepilot-ai'):esc_html__('Disabled','sitepilot-ai'); ?></dd></div><div><dt><?php esc_html_e('Readable permalinks','sitepilot-ai'); ?></dt><dd data-sitepilot-boolean="seo.permalinks"><?php echo $seo['permalinks']?esc_html__('Enabled','sitepilot-ai'):esc_html__('Disabled','sitepilot-ai'); ?></dd></div><div><dt><?php esc_html_e('Robots.txt','sitepilot-ai'); ?></dt><dd data-sitepilot-boolean="seo.robots_available"><?php echo $seo['robots_available']?esc_html__('Available','sitepilot-ai'):esc_html__('Unavailable','sitepilot-ai'); ?></dd></div><div><dt><?php esc_html_e('XML sitemap','sitepilot-ai'); ?></dt><dd data-sitepilot-boolean="seo.sitemap_available"><?php echo $seo['sitemap_available']?esc_html__('Available','sitepilot-ai'):esc_html__('Unavailable','sitepilot-ai'); ?></dd></div><div><dt><?php esc_html_e('Site title','sitepilot-ai'); ?></dt><dd data-sitepilot-field="seo.site_title"><?php echo esc_html($seo['site_title']); ?></dd></div></dl></section>
-<section class="sitepilot-panel"><h2><?php esc_html_e('Database','sitepilot-ai'); ?></h2><dl class="sitepilot-details"><div><dt><?php esc_html_e('Database size','sitepilot-ai'); ?></dt><dd data-sitepilot-field="database.size"><?php echo esc_html($database['size']); ?></dd></div><div><dt><?php esc_html_e('Autoloaded options','sitepilot-ai'); ?></dt><dd data-sitepilot-field="database.autoload_size"><?php echo esc_html($database['autoload_size']); ?></dd></div><div><dt><?php esc_html_e('Tables','sitepilot-ai'); ?></dt><dd data-sitepilot-field="database.table_count"><?php echo esc_html((string)$database['table_count']); ?></dd></div><div><dt><?php esc_html_e('Memory limit','sitepilot-ai'); ?></dt><dd data-sitepilot-field="server.memory_limit"><?php echo esc_html($server['memory_limit']); ?></dd></div><div><dt><?php esc_html_e('Upload limit','sitepilot-ai'); ?></dt><dd data-sitepilot-field="server.upload_limit"><?php echo esc_html($server['upload_limit']); ?></dd></div></dl></section>
-</div>
-<section class="sitepilot-panel"><div class="sitepilot-panel-heading"><div><h2><?php esc_html_e('Recommendations','sitepilot-ai'); ?></h2><p><?php esc_html_e('Prioritized improvements found during the latest scan.','sitepilot-ai'); ?></p></div><div class="sitepilot-panel-actions"><a class="button" href="<?php echo esc_url(admin_url('admin.php?page=sitepilot-ai-issues')); ?>"><?php esc_html_e('View All Issues','sitepilot-ai'); ?></a><span class="sitepilot-count" data-sitepilot-issue-count><?php echo esc_html((string)count($health['issues'])); ?></span></div></div><div class="sitepilot-notice" data-sitepilot-action-status hidden></div><div id="sitepilot-recommendations"><?php if(empty($health['issues'])):?><div class="sitepilot-empty-state"><?php esc_html_e('No important issues were found.','sitepilot-ai'); ?></div><?php else:?><div class="sitepilot-issues"><?php foreach($health['issues'] as $issue):?><article class="sitepilot-issue sitepilot-issue--<?php echo esc_attr($issue['severity']); ?>"><div class="sitepilot-issue-top"><span class="sitepilot-severity"><?php echo esc_html(strtoupper($issue['severity'])); ?></span><span class="sitepilot-impact">+<?php echo esc_html((string)$issue['impact']); ?></span></div><h3><?php echo esc_html($issue['title']); ?></h3><p><?php echo esc_html($issue['reason']); ?></p><div class="sitepilot-fix"><strong><?php esc_html_e('Recommended fix:','sitepilot-ai'); ?></strong> <?php echo esc_html($issue['fix']); ?></div><?php if(!empty($issue['fixable'])&&!empty($issue['fix_action'])):?><button type="button" class="button button-primary sitepilot-fix-button" data-sitepilot-fix="<?php echo esc_attr($issue['fix_action']); ?>"><?php esc_html_e('Fix Now','sitepilot-ai'); ?></button><?php endif;?></article><?php endforeach;?></div><?php endif;?></div></section>
+<div class="wrap sitepilot-ai" data-sitepilot-dashboard>
+    <div class="sitepilot-header">
+        <div>
+            <h1><?php esc_html_e('SitePilot AI', 'sitepilot-ai'); ?></h1>
+            <p><?php esc_html_e('Website health scanner and optimization assistant.', 'sitepilot-ai'); ?></p>
+        </div>
+        <button type="button" class="button button-primary" data-sitepilot-scan><?php esc_html_e('Run New Scan', 'sitepilot-ai'); ?></button>
+    </div>
+
+    <div class="sitepilot-hero">
+        <div class="sitepilot-score" data-sitepilot-score><?php echo esc_html((string) $scan['score']); ?></div>
+        <div>
+            <div class="sitepilot-status" data-sitepilot-status><?php echo esc_html($scan['status']); ?></div>
+            <p><?php printf(esc_html__('Last scanned %1$s in %2$d ms.', 'sitepilot-ai'), esc_html($scan['generated_at']), (int) $scan['duration_ms']); ?></p>
+        </div>
+    </div>
+
+    <div class="sitepilot-grid">
+        <section class="sitepilot-card">
+            <h2><?php esc_html_e('WordPress', 'sitepilot-ai'); ?></h2>
+            <dl>
+                <dt><?php esc_html_e('Version', 'sitepilot-ai'); ?></dt><dd><?php echo esc_html($sections['wordpress']['version']); ?></dd>
+                <dt><?php esc_html_e('Posts', 'sitepilot-ai'); ?></dt><dd><?php echo esc_html((string) $sections['wordpress']['posts']); ?></dd>
+                <dt><?php esc_html_e('Pages', 'sitepilot-ai'); ?></dt><dd><?php echo esc_html((string) $sections['wordpress']['pages']); ?></dd>
+                <dt><?php esc_html_e('Media', 'sitepilot-ai'); ?></dt><dd><?php echo esc_html((string) $sections['wordpress']['media']); ?></dd>
+            </dl>
+        </section>
+
+        <section class="sitepilot-card">
+            <h2><?php esc_html_e('Server', 'sitepilot-ai'); ?></h2>
+            <dl>
+                <dt><?php esc_html_e('PHP', 'sitepilot-ai'); ?></dt><dd><?php echo esc_html($sections['server']['php_version']); ?></dd>
+                <dt><?php esc_html_e('Database', 'sitepilot-ai'); ?></dt><dd><?php echo esc_html($sections['server']['database_version']); ?></dd>
+                <dt><?php esc_html_e('Memory', 'sitepilot-ai'); ?></dt><dd><?php echo esc_html($sections['server']['wp_memory_limit']); ?></dd>
+                <dt><?php esc_html_e('Upload Limit', 'sitepilot-ai'); ?></dt><dd><?php echo esc_html($sections['server']['upload_limit']); ?></dd>
+            </dl>
+        </section>
+
+        <section class="sitepilot-card">
+            <h2><?php esc_html_e('Theme & Plugins', 'sitepilot-ai'); ?></h2>
+            <dl>
+                <dt><?php esc_html_e('Theme', 'sitepilot-ai'); ?></dt><dd><?php echo esc_html($sections['theme']['name']); ?></dd>
+                <dt><?php esc_html_e('Theme Version', 'sitepilot-ai'); ?></dt><dd><?php echo esc_html($sections['theme']['version']); ?></dd>
+                <dt><?php esc_html_e('Active Plugins', 'sitepilot-ai'); ?></dt><dd><?php echo esc_html((string) $sections['plugins']['active']); ?></dd>
+                <dt><?php esc_html_e('Updates', 'sitepilot-ai'); ?></dt><dd><?php echo esc_html((string) $sections['plugins']['updates']); ?></dd>
+            </dl>
+        </section>
+    </div>
+
+    <section class="sitepilot-card sitepilot-issues">
+        <h2><?php esc_html_e('Priority Improvements', 'sitepilot-ai'); ?></h2>
+        <div data-sitepilot-issues>
+            <?php if (empty($scan['issues'])) : ?>
+                <p class="sitepilot-empty"><?php esc_html_e('No priority issues were detected.', 'sitepilot-ai'); ?></p>
+            <?php else : ?>
+                <?php foreach ($scan['issues'] as $issue) : ?>
+                    <article class="sitepilot-issue sitepilot-severity-<?php echo esc_attr($issue['severity']); ?>">
+                        <div><strong><?php echo esc_html($issue['title']); ?></strong><p><?php echo esc_html($issue['fix']); ?></p></div>
+                        <span>+<?php echo esc_html((string) $issue['impact']); ?></span>
+                    </article>
+                <?php endforeach; ?>
+            <?php endif; ?>
+        </div>
+    </section>
 </div>

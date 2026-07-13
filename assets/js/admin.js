@@ -1,307 +1,46 @@
-(function () {
+(() => {
     'use strict';
 
-    function getPath(object, path) {
-        return path.split('.').reduce(function (value, key) {
-            return value && Object.prototype.hasOwnProperty.call(value, key) ? value[key] : '';
-        }, object);
-    }
+    const dashboard = document.querySelector('[data-sitepilot-dashboard]');
+    if (!dashboard || typeof SitePilotAI === 'undefined') return;
 
-    function showStatus(message, isError) {
-        var status = document.querySelector('[data-sitepilot-action-status]') || document.getElementById('sitepilot-scan-status');
-        if (!status) return;
-        status.hidden = false;
-        status.textContent = message;
-        status.classList.toggle('is-error', Boolean(isError));
-    }
+    const button = dashboard.querySelector('[data-sitepilot-scan]');
+    const score = dashboard.querySelector('[data-sitepilot-score]');
+    const status = dashboard.querySelector('[data-sitepilot-status]');
+    const issues = dashboard.querySelector('[data-sitepilot-issues]');
 
-    function renderIssues(issues) {
-        var container = document.getElementById('sitepilot-recommendations');
-        var count = document.querySelector('[data-sitepilot-issue-count]');
-        if (!container) return;
-        if (count) count.textContent = issues ? issues.length : 0;
-        if (!issues || !issues.length) {
-            container.innerHTML = '<div class="sitepilot-empty-state">No important issues were found.</div>';
-            return;
-        }
+    button?.addEventListener('click', async () => {
+        const original = button.textContent;
+        button.disabled = true;
+        button.textContent = SitePilotAI.scanning;
 
-        var wrap = document.createElement('div');
-        wrap.className = 'sitepilot-issues';
-        issues.forEach(function (issue) {
-            var article = document.createElement('article');
-            article.className = 'sitepilot-issue sitepilot-issue--' + issue.severity;
-            article.innerHTML = '<div class="sitepilot-issue-top"><span class="sitepilot-severity"></span><span class="sitepilot-impact"></span></div><h3></h3><p></p><div class="sitepilot-fix"><strong>Recommended fix: </strong><span></span></div>';
-            article.querySelector('.sitepilot-severity').textContent = String(issue.severity).toUpperCase();
-            article.querySelector('.sitepilot-impact').textContent = '+' + issue.impact;
-            article.querySelector('h3').textContent = issue.title;
-            article.querySelector('p').textContent = issue.description || issue.reason;
-            article.querySelector('.sitepilot-fix span').textContent = issue.fix;
-            if (issue.fixable && issue.fix_action) {
-                var button = document.createElement('button');
-                button.type = 'button';
-                button.className = 'button button-primary sitepilot-fix-button';
-                button.dataset.sitepilotFix = issue.fix_action;
-                button.textContent = 'Fix Now';
-                article.appendChild(button);
-            }
-            wrap.appendChild(article);
-        });
-        container.replaceChildren(wrap);
-    }
-
-    function updateDashboard(data) {
-        document.querySelectorAll('[data-sitepilot-field]').forEach(function (node) {
-            node.textContent = getPath(data, node.dataset.sitepilotField);
-        });
-        document.querySelectorAll('[data-sitepilot-boolean]').forEach(function (node) {
-            node.textContent = getPath(data, node.dataset.sitepilotBoolean) ? SitePilotAI.enabled : SitePilotAI.disabled;
-        });
-        document.querySelectorAll('[data-sitepilot-progress]').forEach(function (node) {
-            node.style.width = getPath(data, node.dataset.sitepilotProgress) + '%';
-        });
-        var ring = document.querySelector('.sitepilot-score-ring');
-        if (ring) ring.style.setProperty('--sitepilot-score', data.health.score);
-        renderIssues(data.health.issues);
-    }
-
-    function runScan() {
-        var dashboard = document.getElementById('sitepilot-dashboard');
-        var button = document.getElementById('sitepilot-run-scan');
-        if (dashboard) dashboard.classList.add('sitepilot-is-scanning');
-        if (button) button.disabled = true;
-        showStatus(SitePilotAI.scanning, false);
-
-        return fetch(SitePilotAI.ajaxUrl, {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'},
-            body: new URLSearchParams({action: 'sitepilot_ai_run_scan', nonce: SitePilotAI.scanNonce}).toString()
-        }).then(function (response) { return response.json(); }).then(function (response) {
-            if (!response.success) throw new Error(response.data && response.data.message ? response.data.message : SitePilotAI.error);
-            updateDashboard(response.data);
-            showStatus(SitePilotAI.completed, false);
-            return response.data;
-        }).finally(function () {
-            if (dashboard) dashboard.classList.remove('sitepilot-is-scanning');
-            if (button) button.disabled = false;
-        });
-    }
-
-    document.addEventListener('DOMContentLoaded', function () {
-        var scanButton = document.getElementById('sitepilot-run-scan');
-        if (scanButton) {
-            scanButton.addEventListener('click', function () {
-                runScan().catch(function (error) { showStatus(error.message || SitePilotAI.error, true); });
-            });
-        }
-
-        document.addEventListener('click', function (event) {
-            var button = event.target.closest('[data-sitepilot-fix]');
-            if (!button) return;
-            if (!window.confirm(SitePilotAI.confirmFix)) return;
-
-            button.disabled = true;
-            showStatus(SitePilotAI.fixing, false);
-            fetch(SitePilotAI.ajaxUrl, {
+        try {
+            const body = new URLSearchParams({ action: 'sitepilot_ai_scan', nonce: SitePilotAI.nonce });
+            const response = await fetch(SitePilotAI.ajaxUrl, {
                 method: 'POST',
                 credentials: 'same-origin',
-                headers: {'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'},
-                body: new URLSearchParams({action: 'sitepilot_ai_fix_issue', nonce: SitePilotAI.fixNonce, fix_action: button.dataset.sitepilotFix}).toString()
-            }).then(function (response) { return response.json(); }).then(function (response) {
-                if (!response.success) throw new Error(response.data && response.data.message ? response.data.message : SitePilotAI.error);
-                showStatus(response.data.message, false);
-                if (document.getElementById('sitepilot-dashboard')) {
-                    updateDashboard(response.data.scan);
-                } else {
-                    window.setTimeout(function () { window.location.reload(); }, 650);
-                }
-            }).catch(function (error) {
-                showStatus(error.message || SitePilotAI.error, true);
-                button.disabled = false;
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+                body
             });
-        });
+            const payload = await response.json();
+            if (!payload.success) throw new Error(payload.data?.message || SitePilotAI.error);
+
+            score.textContent = payload.data.score;
+            status.textContent = payload.data.status;
+            issues.innerHTML = payload.data.issues.length
+                ? payload.data.issues.map(issue => `<article class="sitepilot-issue sitepilot-severity-${escapeHtml(issue.severity)}"><div><strong>${escapeHtml(issue.title)}</strong><p>${escapeHtml(issue.fix)}</p></div><span>+${Number(issue.impact)}</span></article>`).join('')
+                : '<p class="sitepilot-empty">No priority issues were detected.</p>';
+        } catch (error) {
+            window.alert(error.message || SitePilotAI.error);
+        } finally {
+            button.disabled = false;
+            button.textContent = original;
+        }
     });
 
-    document.addEventListener('DOMContentLoaded', function () {
-        var button = document.getElementById('sitepilot-optimize-database');
-        if (!button) return;
-
-        function databaseStatus(message, isError) {
-            var node = document.querySelector('[data-sitepilot-database-status]');
-            if (!node) return;
-            node.hidden = false;
-            node.textContent = message;
-            node.classList.toggle('is-error', Boolean(isError));
-        }
-
-        button.addEventListener('click', function () {
-            var tasks = Array.prototype.slice.call(document.querySelectorAll('.sitepilot-db-task input:checked')).map(function (input) {
-                return input.value;
-            });
-            if (!tasks.length) {
-                databaseStatus('Select at least one cleanup task.', true);
-                return;
-            }
-            if (!window.confirm(SitePilotAI.confirmDatabase)) return;
-
-            button.disabled = true;
-            databaseStatus(SitePilotAI.optimizingDatabase, false);
-            var params = new URLSearchParams({action: 'sitepilot_ai_optimize_database', nonce: SitePilotAI.databaseNonce});
-            tasks.forEach(function (task) { params.append('tasks[]', task); });
-
-            fetch(SitePilotAI.ajaxUrl, {
-                method: 'POST', credentials: 'same-origin',
-                headers: {'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'},
-                body: params.toString()
-            }).then(function (response) { return response.json(); }).then(function (response) {
-                if (!response.success) throw new Error(response.data && response.data.message ? response.data.message : SitePilotAI.error);
-                var data = response.data;
-                var processed = Object.keys(data.deleted || {}).reduce(function (sum, key) { return sum + Number(data.deleted[key] || 0); }, 0);
-                document.querySelectorAll('[data-result]').forEach(function (node) {
-                    var key = node.dataset.result;
-                    node.textContent = key === 'processed' ? processed : (data[key] || '—');
-                });
-                Object.keys(data.report || {}).forEach(function (key) {
-                    document.querySelectorAll('[data-db-field="' + key + '"]').forEach(function (node) { node.textContent = data.report[key]; });
-                    document.querySelectorAll('[data-db-count="' + key + '"]').forEach(function (node) { node.textContent = data.report[key]; });
-                });
-                var result = document.getElementById('sitepilot-db-result');
-                if (result) result.hidden = false;
-                databaseStatus(data.errors && data.errors.length ? 'Cleanup finished, but some tables could not be optimized.' : 'Database optimization completed successfully.', Boolean(data.errors && data.errors.length));
-            }).catch(function (error) {
-                databaseStatus(error.message || SitePilotAI.error, true);
-            }).finally(function () {
-                button.disabled = false;
-            });
-        });
-    });
-
-
-    document.addEventListener('DOMContentLoaded', function () {
-        var button = document.getElementById('sitepilot-run-performance-scan');
-        if (!button) return;
-
-        function pathValue(object, path) {
-            return path.split('.').reduce(function (value, key) {
-                return value && Object.prototype.hasOwnProperty.call(value, key) ? value[key] : '';
-            }, object);
-        }
-
-        function status(message, isError) {
-            var node = document.querySelector('[data-sitepilot-performance-status]');
-            if (!node) return;
-            node.hidden = false;
-            node.textContent = message;
-            node.classList.toggle('is-error', Boolean(isError));
-        }
-
-        function renderRecommendations(items) {
-            var container = document.querySelector('[data-performance-recommendations]');
-            var count = document.querySelector('[data-performance-recommendation-count]');
-            if (count) count.textContent = items.length;
-            if (!container) return;
-            if (!items.length) {
-                container.innerHTML = '<div class="sitepilot-empty-state">No major performance configuration issues were detected.</div>';
-                return;
-            }
-            container.replaceChildren.apply(container, items.map(function (item) {
-                var article = document.createElement('article');
-                article.className = 'sitepilot-performance-recommendation sitepilot-performance-recommendation--' + item.status;
-                var impact = document.createElement('span');
-                impact.textContent = '+' + item.impact;
-                var copy = document.createElement('div');
-                var title = document.createElement('h3');
-                title.textContent = item.title;
-                var message = document.createElement('p');
-                message.textContent = item.message;
-                copy.append(title, message);
-                article.append(impact, copy);
-                return article;
-            }));
-        }
-
-        button.addEventListener('click', function () {
-            button.disabled = true;
-            document.getElementById('sitepilot-performance').classList.add('sitepilot-is-scanning');
-            status(SitePilotAI.scanningPerformance, false);
-            fetch(SitePilotAI.ajaxUrl, {
-                method: 'POST', credentials: 'same-origin',
-                headers: {'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'},
-                body: new URLSearchParams({action: 'sitepilot_ai_run_performance_scan', nonce: SitePilotAI.performanceNonce}).toString()
-            }).then(function (response) { return response.json(); }).then(function (response) {
-                if (!response.success) throw new Error(response.data && response.data.message ? response.data.message : SitePilotAI.error);
-                var data = response.data;
-                document.querySelectorAll('[data-performance-field]').forEach(function (node) {
-                    node.textContent = pathValue(data, node.dataset.performanceField);
-                });
-                var ring = document.querySelector('#sitepilot-performance .sitepilot-score-ring');
-                if (ring) ring.style.setProperty('--sitepilot-score', data.score);
-                var label = document.querySelector('[data-performance-status-label]');
-                if (label) label.textContent = data.score >= 90 ? 'Excellent' : (data.score >= 75 ? 'Good' : (data.score >= 55 ? 'Needs attention' : 'Poor'));
-                Object.keys(data.checks).forEach(function (key) {
-                    var node = document.querySelector('[data-performance-check="' + key + '"]');
-                    if (!node) return;
-                    node.className = 'sitepilot-performance-check sitepilot-performance-check--' + data.checks[key].status;
-                    var value = node.querySelector('[data-check-value]');
-                    if (value) value.textContent = data.checks[key].value;
-                });
-                renderRecommendations(data.recommendations || []);
-                status(SitePilotAI.performanceCompleted, false);
-            }).catch(function (error) {
-                status(error.message || SitePilotAI.error, true);
-            }).finally(function () {
-                button.disabled = false;
-                document.getElementById('sitepilot-performance').classList.remove('sitepilot-is-scanning');
-            });
-        });
-    });
-}());
-
-(function () {
-    'use strict';
-
-    document.addEventListener('DOMContentLoaded', function () {
-        var buttons = document.querySelectorAll('[data-sitepilot-automation-job]');
-        if (!buttons.length) return;
-
-        function setStatus(message, isError) {
-            var node = document.querySelector('[data-sitepilot-automation-status]');
-            if (!node) return;
-            node.hidden = false;
-            node.textContent = message;
-            node.classList.toggle('is-error', Boolean(isError));
-        }
-
-        buttons.forEach(function (button) {
-            button.addEventListener('click', function () {
-                if (!window.confirm(SitePilotAI.confirmAutomation)) return;
-
-                var job = button.dataset.sitepilotAutomationJob;
-                button.disabled = true;
-                setStatus(SitePilotAI.runningAutomation, false);
-
-                fetch(SitePilotAI.ajaxUrl, {
-                    method: 'POST',
-                    credentials: 'same-origin',
-                    headers: {'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'},
-                    body: new URLSearchParams({
-                        action: 'sitepilot_ai_run_automation',
-                        nonce: SitePilotAI.automationNonce,
-                        job: job
-                    }).toString()
-                }).then(function (response) {
-                    return response.json();
-                }).then(function (response) {
-                    if (!response.success) {
-                        throw new Error(response.data && response.data.message ? response.data.message : SitePilotAI.error);
-                    }
-                    setStatus(response.data.message || 'Automation completed.', false);
-                    window.setTimeout(function () { window.location.reload(); }, 900);
-                }).catch(function (error) {
-                    setStatus(error.message || SitePilotAI.error, true);
-                    button.disabled = false;
-                });
-            });
-        });
-    });
-}());
+    function escapeHtml(value) {
+        const node = document.createElement('div');
+        node.textContent = String(value);
+        return node.innerHTML;
+    }
+})();
